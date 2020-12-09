@@ -71,12 +71,40 @@ function setMine(rows, cols, num_mine) {
   MINE = mine;
 }
 
-function countSurroundingMine(x, y){
+function countSurroundingMine(row, col){
+  let mine_count = 0;
+  // mine_count += MINE[row][col + 1] ? 1 : 0;
+  if(MINE[row][col + 1]){
+    mine_count += MINE[row][col + 1];
+  }
+  if(MINE[row][col - 1]){
+    mine_count += MINE[row][col - 1];
+  }
+  if(MINE[row + 1][col]){
+    mine_count += MINE[row + 1][col];
+  }
+  if(MINE[row - 1][col]){
+    mine_count += MINE[row - 1][col];
+  }
+  if(MINE[row + 1][col + 1]){
+    mine_count += MINE[row + 1][col + 1];
+  }
+  if(MINE[row - 1][col + 1]){
+    mine_count += MINE[row - 1][col + 1];
+  }
+  if(MINE[row + 1][col - 1]){
+    mine_count += MINE[row + 1][col - 1];
+  }
+  if(MINE[row - 1][col - 1]){
+    mine_count += MINE[row - 1][col - 1];
+  }
+
+  return mine_count;
 
 }
 
 function createTile(x, y) {
-  var tile = document.createElement("button");
+  var tile = document.createElement("div");
 
   tile.classList.add("tile");
   tile.classList.add("hidden");
@@ -108,6 +136,27 @@ function smileyUp() {
   smiley.classList.remove("face_down");
 }
 
+function handleLeftClick(tile){
+  //if this tile is not flagged, reveal it
+  if(tile.classList.value.split(" ").indexOf("flag") < 0){
+    revealTile(tile); 
+  }
+}
+
+function handleRightClick(tile){
+  //if this tile is not flagged
+  if(tile.classList.value.split(" ").indexOf("flag") < 0){
+    //add flag to the class list so tile style changed
+    tile.classList.add("flag");
+  }else{
+    tile.classList.remove("flag");
+  }
+}
+
+function handleMiddleClick(tile){
+  const index = tile.name.split(",");
+}
+
 function handleTileClick(event) {
   event.preventDefault();
   if (typeof event === "object") {
@@ -115,6 +164,7 @@ function handleTileClick(event) {
     switch (event.button) {
       case 0:
         console.log("Reveal if not flagged", index);
+        handleLeftClick(event.target);
         break;
       case 1:
 				/* 
@@ -124,9 +174,11 @@ function handleTileClick(event) {
         3. The number of adjacent flags matches the number on the tile clicked on.
 				*/
         console.log("Reveal surrounding tiles ", index);
+        handleMiddleClick(event.target);
         break;
       case 2:
-				console.log("flag/unflag.", index);
+        console.log("flag/unflag.", index);
+        handleRightClick(event.target);
         break;
       default:
         console.log(`Unknown button code: ${e.button}`);
