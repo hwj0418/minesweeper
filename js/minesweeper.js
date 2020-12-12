@@ -9,12 +9,14 @@ const EASY_ROW = (EASY_COL = 9),
 
 let MINE_GRID,
   NUM_MINE = EASY_MINE,
+  NUM_FLAG = 0,
+  MINE_COUNT,
   ROWS = EASY_ROW,
   COLS = EASY_COL;
 
-var time = document.getElementById("timer"); 
+var time = document.getElementById("timer");
 var timer = setInterval(function () {
-  let seconds = (parseFloat(time.innerHTML) + 1); 
+  let seconds = (parseFloat(time.innerHTML) + 1);
   time.innerHTML = seconds;
 }, 1000);
 
@@ -58,33 +60,36 @@ function setMineGrid() {
 }
 
 function countSurroundingMine(row, col) {
+
   return new Promise((resolve, reject) => {
     let mine_count = 0;
-    if (col < COLS - 1 && MINE_GRID[row][col + 1]) {
-      mine_count += MINE_GRID[row][col + 1];
-    }
-    if (col > 0 && MINE_GRID[row][col - 1]) {
-      mine_count += MINE_GRID[row][col - 1];
-    }
-    if (row < ROWS - 1 && MINE_GRID[row + 1][col]) {
-      mine_count += MINE_GRID[row + 1][col];
-    }
-    if (row > 0 && MINE_GRID[row - 1][col]) {
-      mine_count += MINE_GRID[row - 1][col];
-    }
-    if (col + 1 < COLS && row + 1 < ROWS && MINE_GRID[row + 1][col + 1]) {
-      mine_count += MINE_GRID[row + 1][col + 1];
-    }
-    if (row > 0 && col + 1 < COLS && MINE_GRID[row - 1][col + 1]) {
-      mine_count += MINE_GRID[row - 1][col + 1];
-    }
-    if (row < ROWS - 1 && col > 0 && MINE_GRID[row + 1][col - 1]) {
-      mine_count += MINE_GRID[row + 1][col - 1];
-    }
-    if (row > 0 && col > 0 && MINE_GRID[row - 1][col - 1]) {
-      mine_count += MINE_GRID[row - 1][col - 1];
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const row_i = Number(row) + i,
+          col_j = Number(col) + j;
+        if (row_i >= 0 && row_i < ROWS && col_j < COLS && col_j >= 0) mine_count += MINE_GRID[row_i][col_j];
+      }
     }
     return resolve(mine_count);
+  });
+}
+
+function countSurroundingFlag(row, col) {
+
+  return new Promise((resolve, reject) => {
+    let flag_count = 0;
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const row_i = Number(row) + i,
+          col_j = Number(col) + j;
+        if (row_i >= 0 && row_i < ROWS && col_j < COLS && col_j >= 0) {
+          let tile = document.getElementById(`${row_i},${col_j}`);
+          console.log("couting flag on ", row, col, row_i, col_j, tile.classList.contains("flag"));
+          flag_count += tile.classList.contains("flag") ? 1 : 0;
+        }
+      }
+    }
+    return resolve(flag_count);
   });
 }
 
@@ -100,18 +105,25 @@ function createTile(x, y) {
   tile.addEventListener("contextmenu", function (e) {
     e.preventDefault();
   }); // Right Click
-  tile.addEventListener("mouseup", handleTileClick); // All Clicks
-
+  tile.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    // tile.classList.remove("hidden");
+  });
+  tile.addEventListener("mouseup", (e) => {
+    // tile.classList.add("hidden");
+    handleTileClick(e);
+  }); // All Clicks
   return tile;
 }
 
 async function reveal_one(row, col) {
+  // console.log(`revealing ${[row, col]}`);
   let tile = document.getElementById(`${row},${col}`);
-  if (MINE_GRID[row][col] !== 0 || !tile.classList.contains("hidden")) return;
+  if (MINE_GRID[row][col] !== 0 || !tile.classList.contains("hidden") || tile.classList.contains("flag")) return;
   //count surrounding mine
   const mine_count = await countSurroundingMine(row, col);
   tile.classList.remove("hidden");
-  tile.disabled = true;
+
   if (mine_count > 0) {
     //if more than 0 mine surround
     //reveal tile but mark it by number of mine(s) surrounded
@@ -143,6 +155,7 @@ async function reveal_one(row, col) {
     }
   } else {
     reveal_surround(row, col);
+    tile.disabled = true;
   }
 }
 
@@ -154,9 +167,9 @@ function reveal_all() {
     for (let j = 0; j < m; j++) {
       let tile = document.getElementById(`${i},${j}`);
       if (MINE_GRID[i][j] == 1) {
-        tile.classList.contains("flag")
-          ? tile.classList.add("mine_marked")
-          : tile.classList.add("mine");
+        tile.classList.contains("flag") ?
+          tile.classList.add("mine_marked") :
+          tile.classList.add("mine");
       }
       tile.classList.remove("hidden");
       tile.disabled = true;
@@ -164,40 +177,48 @@ function reveal_all() {
   }
 }
 
-function reveal_surround(row, col){
-  if (col + 1 < COLS) reveal_one(row, col + 1);
-  if (col > 0) reveal_one(row, col - 1);
-  if (row + 1 < ROWS) reveal_one(row + 1, col);
-  if (row > 0) reveal_one(row - 1, col);
-  if (col + 1 < COLS && row + 1 < ROWS) reveal_one(row + 1, col + 1);
-  if (col + 1 < COLS && row > 0) reveal_one(row - 1, col + 1);
-  if (col > 0 && row + 1 < ROWS) reveal_one(row + 1, col - 1);
-  if (col > 0 && row > 0) reveal_one(row - 1, col - 1);
+function reveal_surround(row, col) {
+  for (let i = -1; i <= 1; i++) {
+    for (let j = -1; j <= 1; j++) {
+      const row_i = Number(row) + i,
+        col_j = Number(col) + j;
+      if (row_i >= 0 && row_i < ROWS && col_j < COLS && col_j >= 0) {
+        reveal_one(row_i, col_j);
+      }
+    }
+  }
 }
 
 function handleLeftClick(tile) {
-  const index = tile.id.split(",");
+  const [row, col] = tile.id.split(",");
   //if this tile is not flagged, and not opened, reveal it
-  if (!tile.classList.contains("flag") && tile.classList.contains("hidden")) {
+  if (tile.classList.contains("hidden")) {
     //check if hit a mine
-    if (MINE_GRID[index[0]][index[1]]) {
+    if (MINE_GRID[row][col]) {
       //handle mine hit
       clearInterval(timer);
       tile.classList.add("mine_hit");
       smileyLose();
       reveal_all();
     } else {
-      reveal_one(Number(index[0]), Number(index[1]));
+      reveal_one(Number(row), Number(col));
     }
   }
 }
 
 function handleRightClick(tile) {
   const [row, col] = tile.id.split(",");
-  tile.classList.toggle("flag");
-  if (tile.classList.contains("flag") > 0 && MINE_GRID[row][col]) NUM_MINE--;
-  if (!tile.classList.contains("flag") > 0 && MINE_GRID[row][col]) NUM_MINE--;
-  if (NUM_MINE == 0) {
+  // tile.classList.toggle("flag");
+  if(tile.classList.contains("flag")){
+    NUM_FLAG --;
+    tile.classList.remove("flag");
+  }else{
+    NUM_FLAG ++;
+    tile.classList.add("flag");
+  }
+  if (tile.classList.contains("flag") && MINE_GRID[row][col]) MINE_COUNT--;
+  if (!tile.classList.contains("flag") && MINE_GRID[row][col]) MINE_COUNT++;
+  if (MINE_COUNT == 0 && NUM_FLAG == NUM_MINE) {
     clearInterval(timer);
     smileyWin();
     reveal_all();
@@ -209,11 +230,15 @@ This only works if:
     1. The tile clicked on is revealed.
     2. The tile clicked on has a number on it. 
     3. The number of adjacent flags matches the number on the tile clicked on. */
-function handleMiddleClick(tile) {
+async function handleMiddleClick(tile) {
   const [row, col] = tile.id.split(",");
-  if(tile.classList.contains("hidden")) return; //is not revealed
-  if(tile.classList.length == 1) return; //does not have number on it
-  reveal_surround(row, col);
+  if (tile.classList.contains("hidden")) return; //is not revealed
+  if (tile.classList.length == 1) return; //does not have number on it
+  // count surrouding flags
+  let flag_count = await countSurroundingFlag(row, col);
+  // if surrounding flags matches the number on the tile
+  console.log(`tile_${flag_count}`, tile.classList, tile.classList.contains(`tile_${flag_count}`));
+  if (tile.classList.contains(`tile_${flag_count}`)) reveal_surround(row, col);
 }
 
 function handleTileClick(event) {
@@ -222,16 +247,16 @@ function handleTileClick(event) {
     const index = event.target.id.split(",");
     switch (event.button) {
       case 0:
-        console.log("Reveal if not flagged", index);
+        console.log("left click", index);
         handleLeftClick(event.target);
         break;
       case 1:
-        console.log("Reveal surrounding tiles ", index);
+        console.log("middle click", index);
         handleMiddleClick(event.target);
         break;
       case 2:
-        console.log("flag/unflag.", index);
-        handleRightClick(event.target);
+        console.log("right click", index);
+        if(event.target.classList.contains("hidden")) handleRightClick(event.target);
         break;
       default:
         console.log(`Unknown button code: ${e.button}`);
@@ -242,8 +267,8 @@ function handleTileClick(event) {
 function setDifficulty() {
   var difficultySelector = document.getElementById("difficulty");
   var difficulty = difficultySelector.selectedIndex;
-  console.log(difficulty);
   //TODO implement me
+  
   switch (difficulty) {
     case 0:
       ROWS = EASY_ROW;
@@ -260,11 +285,21 @@ function setDifficulty() {
       COLS = HARD_COL;
       NUM_MINE = HARD_MINE;
       break;
+    default:
+      ROWS = EASY_ROW;
+      COLS = EASY_COL;
+      NUM_MINE = EASY_MINE;
+      break;
   }
+  NUM_FLAG = 0;
+  MINE_COUNT = NUM_MINE;
 }
 
 function startGame() {
+  smileyUp()
+  setDifficulty()
   buildGrid();
+  console.log(MINE_GRID);
 }
 
 function smileyDown() {
@@ -274,7 +309,9 @@ function smileyDown() {
 
 function smileyUp() {
   var smiley = document.getElementById("smiley");
-  smiley.classList.remove("face_down");
+  smiley.className = "";
+  smiley.classList.add("smiley");
+  smiley.classList.add("face_up");
 }
 
 function smileyLose() {
