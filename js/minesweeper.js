@@ -25,9 +25,9 @@ function buildGrid() {
   let grid = document.getElementById("minefield");
   grid.innerHTML = "";
   let tile;
-  for (let y = 0; y < ROWS; y++) {
-    for (let x = 0; x < COLS; x++) {
-      tile = createTile(x, y);
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      tile = createTile(row, col);
       grid.appendChild(tile);
     }
   }
@@ -45,7 +45,7 @@ function buildGrid() {
  * @param {Number} row
  * @param {Number} col
  */
-function createTile(col, row) {
+function createTile(row, col) {
   let tile = document.createElement("button");
   tile.classList.add("tile");
   tile.classList.add("hidden");
@@ -75,28 +75,25 @@ function createTile(col, row) {
 function setMineGrid(row, col) {
   //helper function to check if selected index should not contain mine
   //non mine area should be the tiles around param index [row, col]
-  
-  function notMineArea(row_i, col_j){
-      for (let i = -1; i <= 1; i++) {
-        for (let j = -1; j <= 1; j++) {
-          if(row_i == row + i || col_j == col + j) return false;
-        }
+  MINE_GRID = [];
+  let mine = Array(NUM_MINE)
+    .fill(1)
+    .concat(Array(ROWS * COLS - NUM_MINE).fill(0));
+  for (let i = ROWS * COLS - 1; i >= 0; i--) {
+    const random_index = Math.floor(Math.random() * i);
+    [mine[i], mine[random_index]] = [mine[random_index], mine[i]];
+  }
+  for (let i = -1; i <= 1; i++) {
+    for (let j = -1; j <= 1; j++) {
+      let k = (row + i) * COLS + (col + j);
+      while (mine[k] == 1) {
+        const padding = (row - 2) * COLS + (col - 2),
+          random_index = Math.floor(Math.random() * padding);
+        [mine[k], mine[random_index]] = [mine[random_index], mine[k]];
       }
-      return true;
-    }
-
-  let m = 0;
-  while (m < NUM_MINE) {
-    let ramdon_row = Math.floor(ROWS * Math.random());
-    let ramdon_col = Math.floor(COLS * Math.random());
-    if (
-      notMineArea(ramdon_row, ramdon_col) &&
-      MINE_GRID[ramdon_row][ramdon_col] != 1
-    ) {
-      MINE_GRID[ramdon_row][ramdon_col] = 1;
-      m++;
     }
   }
+  while (mine.length) MINE_GRID.push(mine.splice(0, COLS));
 }
 
 /**
@@ -242,6 +239,11 @@ function handleLeftClick(tile) {
       tile.classList.add("mine_hit");
       smileyLose();
       reveal_all();
+      alert(
+        `Boom! Mine hit. Time played: ${
+          document.getElementById("timer").innerHTML
+        } seconds.`
+      );
     } else {
       reveal_one(Number(row), Number(col));
     }
@@ -290,7 +292,7 @@ function handleTileClick(event) {
           FIRST_CLICK = false;
           setMineGrid(Number(row), Number(col));
           startTimer();
-          console.log(MINE_GRID);
+          // console.log(MINE_GRID);
         }
         handleLeftClick(event.target);
         break;
@@ -309,6 +311,11 @@ function handleTileClick(event) {
       clearInterval(TIMER);
       smileyWin();
       reveal_all();
+      alert(
+        `Well done! You have clear all mines. Time played: ${
+          document.getElementById("timer").innerHTML
+        } seconds.`
+      );
     }
   }
 }
@@ -404,11 +411,11 @@ function simleyLimbo() {
 
 function startTimer() {
   timeValue = 0;
-  TIMER = window.setInterval(onTimerTick, 1000);
+  TIMER = window.setInterval(onTimerTick, 100);
 }
 
 function onTimerTick() {
-  timeValue++;
+  timeValue = (parseFloat(document.getElementById("timer").innerHTML) + 0.1).toFixed(1);
   updateTimer();
 }
 
