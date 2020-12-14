@@ -59,33 +59,28 @@ function createTile(col, row) {
   }); // Right Click
   tile.addEventListener("mousedown", (e) => {
     // e.preventDefault();
-    faceLimbo();
+    simleyLimbo();
   });
   tile.addEventListener("mouseup", (e) => {
-    faceLimbo();
+    simleyLimbo();
     handleTileClick(e);
   }); // All Clicks
   return tile;
 }
 
 /**
- * [1,1][1,2][1,3]
- * [2,1][2,2][2,3]
- * [3,1][3,2][3,3]
- *
- * 123
+ * generate new mine grid which prevent from putting mines around given index.
  * @param {Number} row
  * @param {Number} col
  */
 function newMineGrid(row, col) {
-
-  function notMineArea(row_i, col_j){
+  function notMineArea(row_i, col_j) {
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
-        if(row_i == row + i || col_j == col + j) return false;
+        if (row_i == row + i || col_j == col + j) return true;
       }
     }
-    return true;
+    return false;
   }
 
   let mine = [...Array(ROWS)].map(() => Array(COLS).fill(0));
@@ -93,7 +88,8 @@ function newMineGrid(row, col) {
   while (m < NUM_MINE) {
     let ramdon_row = Math.ceil(ROWS * Math.random()) - 1;
     let ramdon_col = Math.ceil(COLS * Math.random()) - 1;
-    if (notMineArea(ramdon_row, ramdon_col) &&
+    if (
+      !notMineArea(ramdon_row, ramdon_col) &&
       mine[ramdon_row][ramdon_col] != 1
     ) {
       mine[ramdon_row][ramdon_col] = 1;
@@ -148,7 +144,8 @@ function countSurroundingFlag(row, col) {
 function reveal_one(row, col) {
   let tile = document.getElementById(`${row},${col}`);
   //tile should not be revealed if it's mine, or it's already opened, or has a flag on it
-  if (!tile ||
+  if (
+    !tile ||
     MINE_GRID[row][col] !== 0 ||
     !tile.classList.contains("hidden") ||
     tile.classList.contains("flag")
@@ -230,7 +227,8 @@ function reveal_all() {
 }
 
 /**
- * handle left click on the tile element
+ * handle left click on the tile element. 
+ * Reveal this tile if not opened and not flagged
  * @param {DOMElement} tile
  */
 function handleLeftClick(tile) {
@@ -250,19 +248,13 @@ function handleLeftClick(tile) {
   }
 }
 
+/**
+ * handle right flick on the tile element, toggle flag and change flag count.
+ * @param {DOMElement} tile 
+ */
 function handleRightClick(tile) {
-  const [row, col] = tile.id.split(",");
-  // tile.classList.toggle("flag");
-  if (tile.classList.contains("flag")) {
-    tile.classList.remove("flag");
-    NUM_FLAG--;
-  } else {
-    
-    tile.classList.add("flag");
-    NUM_FLAG++;
-  }
-  // if (tile.classList.contains("flag") && MINE_GRID[row][col]) NUM_MINE--;
-  // if (!tile.classList.contains("flag") && MINE_GRID[row][col]) NUM_MINE++;
+  tile.classList.toggle("flag");
+  NUM_FLAG += tile.classList.contains("flag") ? 1 : -1;
   document.getElementById("flagCount").innerHTML = NUM_MINE - NUM_FLAG;
 }
 
@@ -283,6 +275,10 @@ function handleMiddleClick(tile) {
   if (tile.classList.contains(`tile_${flag_count}`)) reveal_surround(row, col);
 }
 
+/**
+ * Handle general lick on tile, toggle face limbo
+ * @param {DOM Event} event 
+ */
 function handleTileClick(event) {
   event.preventDefault();
   if (typeof event === "object") {
@@ -307,24 +303,30 @@ function handleTileClick(event) {
         break;
       default:
         console.log(`Unknown button code: ${e.button}`);
+        break;
     }
     winCheck();
   }
 }
 
+/**
+ * After each click, check the wining condition
+ */
 function winCheck() {
-  if (NUM_MINE > 0) return;
   for (let i = 0; i < ROWS; i++) {
     for (let j = 0; j < COLS; j++) {
       let tile = document.getElementById(`${i},${j}`);
       if (tile.classList.contains("hidden") && MINE_GRID[i][j] == 0) return;
     }
   }
-  clearInterval(timer);
+  clearInterval(TIMER);
   smileyWin();
   reveal_all();
 }
 
+/**
+ * Set difficulty by user choice on the dropdown menu
+ */
 function setDifficulty() {
   let difficultySelector = document.getElementById("difficulty");
   let difficulty = difficultySelector.selectedIndex;
@@ -355,6 +357,9 @@ function setDifficulty() {
   console.log("init", MINE_GRID);
 }
 
+/**
+ * Initial the game board
+ */
 function startGame() {
   FIRST_CLICK = true;
   NUM_FLAG = 0;
@@ -388,7 +393,7 @@ function smileyWin() {
   smiley.classList.add("face_win");
 }
 
-function faceLimbo() {
+function simleyLimbo() {
   let smiley = document.getElementById("smiley");
   smiley.classList.toggle("face_limbo");
 }
