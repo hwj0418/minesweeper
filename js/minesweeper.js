@@ -38,7 +38,6 @@ function buildGrid() {
 
   grid.style.width = COLS * width + "px";
   grid.style.height = ROWS * height + "px";
-  console.log("board is ready!");
 }
 
 /**
@@ -73,30 +72,40 @@ function createTile(col, row) {
  * @param {Number} row
  * @param {Number} col
  */
-function newMineGrid(row, col) {
-  function notMineArea(row_i, col_j) {
-    for (let i = -1; i <= 1; i++) {
-      for (let j = -1; j <= 1; j++) {
-        if (row_i == row + i || col_j == col + j) return true;
-      }
-    }
-    return false;
+function setMineGrid(row, col) {
+  //helper function to check if selected index should not contain mine
+  //non mine area should be the tiles around param index [row, col]
+  MINE_GRID = [];
+  let mine = Array(NUM_MINE)
+    .fill(1)
+    .concat(Array(ROWS * COLS - NUM_MINE).fill(0));
+  for (let i = ROWS * COLS - 1; i >= 0; i--) {
+    [mine[i], mine[Math.floor(Math.random() * i)]] = [
+      mine[Math.floor(Math.random() * i)],
+      mine[i],
+    ];
   }
+  for (let i = -1; i <= 1; i++) {
+    for (let j = -1; j <= 1; j++) {
+      let k = (row + i) * ROWS + (col + j);
+      while (mine[k] === 1) k++;
+      [mine[(row + i) * ROWS + (col + j)], mine[k]] = [mine[k],mine[(row + i) * ROWS + (col + j)]];
+    }
+  }
+  while (mine.length) MINE_GRID.push(mine.splice(0, ROWS));
 
-  let mine = [...Array(ROWS)].map(() => Array(COLS).fill(0));
-  let m = 0;
-  while (m < NUM_MINE) {
-    let ramdon_row = Math.ceil(ROWS * Math.random()) - 1;
-    let ramdon_col = Math.ceil(COLS * Math.random()) - 1;
-    if (
-      !notMineArea(ramdon_row, ramdon_col) &&
-      mine[ramdon_row][ramdon_col] != 1
-    ) {
-      mine[ramdon_row][ramdon_col] = 1;
-      m++;
-    }
-  }
-  return mine;
+  // let m = 0;
+  // while (m < NUM_MINE) {
+  //   let ramdon_row = Math.floor(ROWS * Math.random());
+  //   let ramdon_col = Math.floor(COLS * Math.random());
+  //   if (
+  //     !notMineArea(ramdon_row, ramdon_col) &&
+  //     MINE_GRID[ramdon_row][ramdon_col] != 1
+  //   ) {
+  //     MINE_GRID[ramdon_row][ramdon_col] = 1;
+  //     m++;
+  //   }
+  // }
 }
 
 /**
@@ -227,7 +236,7 @@ function reveal_all() {
 }
 
 /**
- * handle left click on the tile element. 
+ * handle left click on the tile element.
  * Reveal this tile if not opened and not flagged
  * @param {DOMElement} tile
  */
@@ -250,7 +259,7 @@ function handleLeftClick(tile) {
 
 /**
  * handle right flick on the tile element, toggle flag and change flag count.
- * @param {DOMElement} tile 
+ * @param {DOMElement} tile
  */
 function handleRightClick(tile) {
   tile.classList.toggle("flag");
@@ -277,18 +286,18 @@ function handleMiddleClick(tile) {
 
 /**
  * Handle general lick on tile, toggle face limbo
- * @param {DOM Event} event 
+ * @param {DOM Event} event
  */
 function handleTileClick(event) {
   event.preventDefault();
   if (typeof event === "object") {
     const [row, col] = event.target.id.split(",");
-    console.log("clicked on", row, col);
+    // console.log("clicked on", row, col);
     switch (event.button) {
       case 0:
         if (FIRST_CLICK) {
           FIRST_CLICK = false;
-          MINE_GRID = newMineGrid(Number(row), Number(col));
+          setMineGrid(Number(row), Number(col));
           startTimer();
           console.log(MINE_GRID);
         }
@@ -305,7 +314,11 @@ function handleTileClick(event) {
         console.log(`Unknown button code: ${e.button}`);
         break;
     }
-    winCheck();
+    if (winCheck()) {
+      clearInterval(TIMER);
+      smileyWin();
+      reveal_all();
+    }
   }
 }
 
@@ -316,12 +329,12 @@ function winCheck() {
   for (let i = 0; i < ROWS; i++) {
     for (let j = 0; j < COLS; j++) {
       let tile = document.getElementById(`${i},${j}`);
-      if (tile.classList.contains("hidden") && MINE_GRID[i][j] == 0) return;
+      if (tile.classList.contains("hidden") && MINE_GRID[i][j] == 0)
+        return false;
+      if (tile.classList.contains("mine_hit")) return false;
     }
   }
-  clearInterval(TIMER);
-  smileyWin();
-  reveal_all();
+  return true;
 }
 
 /**
@@ -352,9 +365,8 @@ function setDifficulty() {
       NUM_MINE = EASY_MINE;
       break;
   }
-  document.getElementById("flagCount").innerHTML = NUM_MINE;
+
   MINE_GRID = [...Array(ROWS)].map(() => Array(COLS).fill(0));
-  console.log("init", MINE_GRID);
 }
 
 /**
@@ -369,6 +381,7 @@ function startGame() {
   if (document.getElementById("minefield").childElementCount > 0)
     clearInterval(TIMER);
   document.getElementById("timer").innerHTML = 0;
+  document.getElementById("flagCount").innerHTML = NUM_MINE;
 }
 
 function smileyDown() {
