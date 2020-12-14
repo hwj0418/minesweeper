@@ -75,37 +75,28 @@ function createTile(col, row) {
 function setMineGrid(row, col) {
   //helper function to check if selected index should not contain mine
   //non mine area should be the tiles around param index [row, col]
-  MINE_GRID = [];
-  let mine = Array(NUM_MINE)
-    .fill(1)
-    .concat(Array(ROWS * COLS - NUM_MINE).fill(0));
-  for (let i = ROWS * COLS - 1; i >= 0; i--) {
-    [mine[i], mine[Math.floor(Math.random() * i)]] = [
-      mine[Math.floor(Math.random() * i)],
-      mine[i],
-    ];
-  }
-  for (let i = -1; i <= 1; i++) {
-    for (let j = -1; j <= 1; j++) {
-      let k = (row + i) * ROWS + (col + j);
-      while (mine[k] === 1) k++;
-      [mine[(row + i) * ROWS + (col + j)], mine[k]] = [mine[k],mine[(row + i) * ROWS + (col + j)]];
+  
+  function notMineArea(row_i, col_j){
+      for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+          if(row_i == row + i || col_j == col + j) return false;
+        }
+      }
+      return true;
+    }
+
+  let m = 0;
+  while (m < NUM_MINE) {
+    let ramdon_row = Math.floor(ROWS * Math.random());
+    let ramdon_col = Math.floor(COLS * Math.random());
+    if (
+      notMineArea(ramdon_row, ramdon_col) &&
+      MINE_GRID[ramdon_row][ramdon_col] != 1
+    ) {
+      MINE_GRID[ramdon_row][ramdon_col] = 1;
+      m++;
     }
   }
-  while (mine.length) MINE_GRID.push(mine.splice(0, ROWS));
-
-  // let m = 0;
-  // while (m < NUM_MINE) {
-  //   let ramdon_row = Math.floor(ROWS * Math.random());
-  //   let ramdon_col = Math.floor(COLS * Math.random());
-  //   if (
-  //     !notMineArea(ramdon_row, ramdon_col) &&
-  //     MINE_GRID[ramdon_row][ramdon_col] != 1
-  //   ) {
-  //     MINE_GRID[ramdon_row][ramdon_col] = 1;
-  //     m++;
-  //   }
-  // }
 }
 
 /**
