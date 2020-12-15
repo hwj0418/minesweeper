@@ -68,24 +68,26 @@ function createTile(row, col) {
 }
 
 /**
- * generate new mine grid which prevent from putting mines around given index.
+ * generate new mine grid and prevent from putting mines around given index.
  * @param {Number} row
  * @param {Number} col
  */
 function setMineGrid(row, col) {
-  //helper function to check if selected index should not contain mine
-  //non mine area should be the tiles around param index [row, col]
   MINE_GRID = [];
+  //initialized a 1d array with total number of tiles, and set the first NUM_MINE tiles to be mine.
   let mine = Array(NUM_MINE)
     .fill(1)
     .concat(Array(ROWS * COLS - NUM_MINE).fill(0));
+  //shuffle the tiles using Knuth-Shuffle algo, make sure each tile has fair chance to be mine
   for (let i = ROWS * COLS - 1; i >= 0; i--) {
     const random_index = Math.floor(Math.random() * i);
     [mine[i], mine[random_index]] = [mine[random_index], mine[i]];
   }
+  //check the surrounding tiles at given index
   for (let i = -1; i <= 1; i++) {
     for (let j = -1; j <= 1; j++) {
       let k = (row + i) * COLS + (col + j);
+      //if found a tile that has mine, swap it with random tile before this area
       while (mine[k] == 1) {
         const padding = (row - 2) * COLS + (col - 2),
           random_index = Math.floor(Math.random() * padding);
@@ -205,11 +207,9 @@ function reveal_surround(row, col) {
  * Reveal all tiles on the board.
  */
 function reveal_all() {
-  const n = MINE_GRID.length,
-    m = MINE_GRID[0].length;
   //reveal all remainding tile by looping through the board.
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < m; j++) {
+  for (let i = 0; i < ROWS; i++) {
+    for (let j = 0; j < COLS; j++) {
       let tile = document.getElementById(`${i},${j}`);
       if (MINE_GRID[i][j] == 1) {
         tile.classList.contains("flag")
@@ -256,7 +256,7 @@ function handleLeftClick(tile) {
  */
 function handleRightClick(tile) {
   tile.classList.toggle("flag");
-  NUM_FLAG += tile.classList.contains("flag") ? 1 : -1;
+  if((NUM_MINE - NUM_FLAG) > 0) NUM_FLAG += tile.classList.contains("flag") > 0 ? 1 : -1;
   document.getElementById("flagCount").innerHTML = NUM_MINE - NUM_FLAG;
 }
 
@@ -311,6 +311,7 @@ function handleTileClick(event) {
       clearInterval(TIMER);
       smileyWin();
       reveal_all();
+      
       alert(
         `Well done! You have clear all mines. Time played: ${
           document.getElementById("timer").innerHTML
